@@ -1,0 +1,16 @@
+---
+- name: copy file from one server to another server
+  hosts: all 
+  become: yes
+  
+  tasks:
+   - name: backup of file 
+     shell: cp /home/bandaru/akhil  /home/bandaru/akhil_13112023
+
+   - name: Copy file with owner and permissions
+     ansible.builtin.copy:
+      src: /home/bandaru/akhil
+      dest: /home/bandaru/Documents/ansible/akhil
+      owner: root
+      group: root
+      backup: yes

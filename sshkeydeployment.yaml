@@ -1,0 +1,51 @@
+---
+- name: playbook for copying ssh keys
+  hosts: control
+  gather_facts: False
+
+  tasks:
+   - name: set permissions for .ssh directory
+      file: 
+       path: /home/bandaru/.ssh 
+       mode: 0700
+
+   - name: create authorized_keys file
+      file: 
+       path: home/bandaru/.ssh/authorized_keys 
+       state: touch 
+       mode: 0644
+
+   - name: insert public ssh key for user sahil
+     blockinfile:
+       dest: home/bandaru/.ssh/authorized_keys
+       block: |
+        ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCauY5iL3Xr/NCO5FrulidGMmDPV7gs7H6cQEPpQrchkpUuAb3qkvt3KHCPwCwaLiPU/UK5pELYW1MJIJjord0tWuWKabdvprP2ia9+eSCqdlyVl2o2KywsY0VgnGaVWuzat3pscP+zVlIUjDBrh9K3JIJKv0V7HdpHUq1JXFKg+k04JSo3iY5PUG6ih3fRRaQg4rYL+yLR6uc0ujnfaruEnNkUFQzuUgGn0ZMj1X6P6U3B/VJ6aW1hZrdaiwDtdl/+SySvo0qAwjrdqaKZ5YQEwl+OzPoe3TeJKE+AVv0fuYJHmDWOumT5jB8EVZ5fgfMYHoI2LZ5oz/G9X22TDSbZaVNU61v8RXchyeT3/Ajf/g1Rj4owfptuyMdHLoO9IWOJbWYZak8dQAajIiRPZRIX/daqox4V/CzCbooKrj679Rxsk04zCxVJYYbiNYzGHVM5GMbLfoeYKKHhrAn7T8LZvMwvf/OSGotGmv0tJMhh4ekaRXINVcOivztNJLPgEZc= bandaru@bandaru-Lenovo-V15-G2-ITL-Ua
+
+
+
+
+ ---
+- name: Create New User
+  hosts: control
+  become: true
+  gather_facts: false
+  vars:
+# Define your username and password here that you want to create on target hosts.
+    username: ansible
+    userpass: ansible
+  tasks:
+    - name: Create User
+      ansible.builtin.user:
+        name: "{{ username }}"
+        state: present
+        shell: /bin/bash
+        password: "{{ userpass | password_hash('sha512') }}"
+        update_password: on_create
+        groups: "{{ super_group }}"
+        append: yes
+
+    - name: Deploy SSH Public Key
+      ansible.posix.authorized_key:
+        user: "{{ username }}"
+        state: present
+        key: "{{ lookup('file', '/home/{{ username }}/.ssh/id_rsa.pub') }}"

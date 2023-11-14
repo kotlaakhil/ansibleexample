@@ -1,0 +1,24 @@
+- name : create app layer
+  hosts : PROD
+  become : yes
+  tasks :
+    - name : installing java
+      ansible.builtin.yum:
+        name : java 
+        state : present
+
+    - name : download apache tomcat
+      ansible.builtin.get_url:
+        url : https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.65/bin/apache-tomcat-9.0.65.tar.gz
+        dest : /opt
+    - name: Unarchive tomcat file
+      ansible.builtin.unarchive:
+        src: /opt/apache-tomcat-9.0.65.tar.gz
+        dest: /opt
+        remote_src: yes
+
+    - name: Execute the script
+      become : yes
+      local_action: command /opt/apache-tomcat-9.0.65/bin/startup.sh
+
+    

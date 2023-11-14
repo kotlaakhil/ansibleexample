@@ -1,0 +1,91 @@
+- name: installing sonarqube
+  hosts: PROD
+  become: yes
+  tasks :
+    
+    - name: Install the latest version ofjava
+      ansible.builtin.yum:
+        name: java
+        state: latest
+    
+    - name : download sonarqube package
+      ansible.builtin.get_url:
+        url: http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm 
+        dest: /opt
+    
+    - name : Install package.
+      yum:
+        name: /opt/mysql-community-release-el7-5.noarch.rpm
+        state: present
+
+    - name : mysql-community-server
+      ansible.builtin.yum: 
+        name : mysql-community-server
+    
+    - name : starting mysql
+      ansible.builtin.service :
+        name : mysql
+        state : started  
+
+    - name : create sonar.sql file and update
+      copy :
+        content :
+            "CREATE DATABASE sonarqube_db;
+             CREATE USER 'sonarqube_user'@'localhost' IDENTIFIED BY 'password';
+             GRANT ALL PRIVILEGES ON sonarqube_db.* TO 'sonarqube_user'@'localhost' IDENTIFIED BY 'password';
+             FLUSH PRIVILEGES;"
+        dest : /tmp/sonar.sql
+
+    - name: Run command if /path/to/database does not exist (with 'cmd' parameter)
+      ansible.builtin.command:
+        cmd: mysql
+        creates: /tmp/sonar.sql
+    
+    - name: Add the user sonarqube 
+      ansible.builtin.user:
+        name: sonarqube
+    
+    - name : download sonarqube package
+      ansible.builtin.get_url:
+        url: https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-6.7.6.zip 
+        dest: /tmp
+
+    - name : extracting  Soanrqube package 
+      ansible.builtin.unarchive :
+        src : /tmp/sonarqube-6.7.6.zip
+        dest: /tmp
+        remote_src: yes    
+
+        
+    - name: Copy files from foo to bar
+      copy: remote_src=True src=/tmp/sonarqube-6.7.6 dest=/opt/sonarqube
+
+    - name: Change file ownership, group and permissions
+      ansible.builtin.file:
+        path: /opt/sonarqube
+        owner: sonarqube
+        group: sonarqube
+        recurse: true
+
+    - name : copy of the file configuration
+      ansible.builtin.copy:
+        src: /opt/sonarqube/sonarqube-6.7.6/conf/sonar.properties
+        dest: /opt/sonarqube/sonarqube-6.7.6/conf/sonar.properties_bkp
+        remote_src: yes
+
+    - name : Soanrqube DB configuration Update
+      ansible.builtin.blockinfile:
+        path: /opt/sonarqube/sonarqube-6.7.6/conf/sonar.properties
+        block: |
+           sonar.jdbc.username=sonarqube_user
+           sonar.jdbc.password=password
+           sonar.jdbc.url=jdbc:mysql://localhost:3306/sonarqube_db?useUnicode=true&amp;characterEncoding=utf8&amp;rewriteBatchedStatements=true&amp;useConfigs=maxPerformance
+
+    - name : Updating Sonarqude sonar.sh file
+      ansible.builtin.lineinfile:
+        path: /opt/sonarqube/sonarqube-6.7.6/bin/linux-x86-64/sonar.sh
+        regexp: '^#RUN_AS_USER='
+        line: RUN_AS_USER=sonarqube   
+    
+    - name: starting sonarqube
+      command:  sh /opt/sonarqube/sonarqube-6.7.6/bin/linux-x86-64/sonar.sh startchr

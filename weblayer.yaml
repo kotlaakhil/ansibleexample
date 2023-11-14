@@ -1,0 +1,68 @@
+- name: create web layer
+  hosts: PROD
+  become: yes
+  tasks :
+    - name : installing  web server
+      ansible.builtin.yum :
+        name : "{{item.name}}"
+        state : "{{item.state}}"
+      loop :
+        - {name: 'httpd' , state : 'latest'}
+        - {name: 'httpd-devel' , state : 'latest'}
+        - {name: 'gcc' , state : 'latest'}
+        - {name: 'make' , state : 'latest'}
+
+    - name : starting web server
+      ansible.builtin.service :
+        name : httpd
+        state : started
+
+    - name : download the mod_jk
+      ansiblr.builtin.get_url :
+        url: https://dlcdn.apache.org/tomcat/tomcat-connectors/jk/tomcat-connectors-1.2.48-src.tar.gz
+        dest : /opt
+
+    - name : extracting file 
+      ansible.builtin.unarchive :
+        src:/opt/tomcat-connectors-1.2.48-src.tar.gz
+        dest: /opt
+        remote_src: yes
+
+    - name : complie mod_jk
+      ansible.builtin.shell : "{{item}}" 
+      args :
+        chdir : /opt/tomcat-connectors-1.2.48/native
+      loop :
+        - ./configure --with-apxs=/bin/apxs
+        - make
+        - make install
+ 
+      - name : create modjk.conf file and update
+        copy :
+          content :
+            LoadModule jk_module modules/mod_jk.so
+            JkWorkersFile conf.d/workers.properties
+            JkLogFile logs/mod_jk.log
+            JkLogLevel info
+            JkLogStampFormat "[%a %b %d %H:%M:%S %Y]"
+            JkOptions +ForwardKeySize +ForwardURICompat -ForwardDirectories
+            JkRequestLogFormat "%w %V %T"
+            JkMount /LoginApp tomcatA
+            JkMount /LoginApp/* tomcatA
+          dest : /etc/httpd/conf.d/modjk.conf
+      
+      - name: Ensure SELinux is set to enforcing mode
+        ansible.builtin.lineinfile:
+          path: /etc/selinux/config
+          regexp: '^SELINUX='
+          line: SELINUX=enforcing      
+      
+      - name: create workers.properties  file
+        ansible.builtin.blockinfile:
+          path: etc/httpd/conf.d/workers.properties
+          block: |
+            worker.list=tomcatA
+            worker.tomcatA.type=ajp13
+            worker.tomcatA.host=10.128.0.5
+            worker.tomcatA.port=8009
+

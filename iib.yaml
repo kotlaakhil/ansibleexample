@@ -1,0 +1,46 @@
+-- name : installing mq and iib
+   host:
+   become : yes
+   task : 
+    - name: Add the user 'johnd' with a specific uid and a primary group of 'admin'
+      ansible.builtin.user:
+        name: mqm
+        password : sarasu10
+
+    - name : download the package
+      ansible.builtin.get_url:
+        url: https://drive.google.com/file/d/1aq_VnPD3gWwbxyL7341wFK5O4bCmIN0U/view?usp=sharing
+        dest: /opt
+
+    - name : extract the file 
+      ansible.builtin.unarchive:
+       src: /opt/IBM_MQ.tar.gz
+       dest: /opt/
+       remote_src: yes    
+
+    - name : Updating sysctl.con  file
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^kernel.shmmni = 4096'
+        line: kernel.shmmni = 4096
+        regexp : '^kernel.shmall = 1073741824'
+        line : kernel.shmall = 2097152
+        regexp : '^kernel.shmmax = 4398046511104'
+        line : kernel.shmmax = 268435456
+        regexp : '^kernel.sem = 250 32000 100 128'
+        line : kernel.sem = 500 256000 250 1024
+
+    - name : update file with limits
+      ansible.builtin.blockinfile:
+        path: /etc/security/limits.conf
+        block: |
+           mqm  hard  nproc  4096
+           mqm  soft  nproc  4096
+           mqm  hard  nofile 10240
+           mqm  soft  nofile 10240
+
+    - name : accept licence 
+      command:  sh /opt/MQServer/mqlicense.sh -accept
+
+     - name : install rpm packages
+       command: rpm -ivh /  
