@@ -1,18 +1,33 @@
 ---
-- name: copy file from one server to another server
-  hosts: 192.168.1.44
+- name: add user and update file
+  hosts: all
   become: yes
 
   tasks:
    - name: create users 
-     user:
-        name: "{{ item.user }}"
-        password: "{{ item.password }}"
-        state: present
-     with_items:
-          - { user: ansible-agent, password: 1254254125 }
-          - { user: agent, password: 252545 }  
-      
+     ansible.builtin.user:
+        name: akhil
+        comment: akhil Doe
+        group: root
+
+
+  # - name: create users 
+  #   user:
+  #     name: "{{ item.user }}"
+  #      password: "{{ item.password }}"
+   #     state: present
+  #   with_items:
+   #       - { user: ansible-agent, password: 1254254125 }
+   #       - { user: agent, password: 252545 } 
+
+   - name: Copy file with owner and permissions
+     ansible.builtin.copy:
+       src: /etc/ssh/sshd_config
+       dest: /etc/ssh/sshd_config_akhil
+       owner: root
+       group: root
+       remote_src: True
+       
    - name: Insert/Update "Match User" configuration block in /etc/ssh/sshd_config
      ansible.builtin.blockinfile:
          path: /etc/ssh/sshd_config
