@@ -1,0 +1,32 @@
+---
+ -name : installation of mysql
+  hosts: all
+  become : true
+ # -vars:
+  
+
+  tasks:
+   -name: download mysqlsoftware
+    ansible.builtin.yum:
+      name:
+        - mysql
+        - mysql-server
+        - mysql-libs
+        - mysql-server
+      state: present
+  -name : check mysql is installed or not 
+   ansible.builtin.shell:
+      cmd: mysql -V
+  -name : start mysql
+   ansible.builtin.shell:
+      cmd: systemctl start mysqld
+  -name : to stop mysqsl DB
+   ansible.builtin.shell:
+      cmd:  service mysql [stop]
+  
+    
+  
+
+#    yum install mysql mysql-server mysql-libs mysql-server
+ #   systemctl start mysqld  --- start mysql
+  #  service mysql [start|stop]
