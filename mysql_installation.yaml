@@ -1,32 +1,48 @@
 ---
- -name : installation of mysql
-  hosts: all
-  become : true
- # -vars:
-  
+ - name : installation of mysql
+   hosts: all
+   become: yes
+   vars:   
+    mysql_root_password: password
+   vars:
+     packages:
+     - update
+     - mysql80-community-release-el9-1.noarch.rpm
+     - mysql-community-server
+   tasks:
+      - name: Download 
+        ansible.builtin.get_url:       
+          url: https://dev.mysql.com/get/mysql80-community-release-el9-1.noarch.rpm
+          dest: /home/ec2-user/mysql80-community-release-el9-1.noarch.rpm
+          mode: 0755
+          group: "ec2-user"
+          owner: "ec2-user"
+          http_agent: ansible-httpsget
+      - name: Install a list of packages with a list variable
+        ansible.builtin.yum:
+         name: "{{ packages }}"
+      - name: check mysql is installed or not 
+        ansible.builtin.shell:
+          cmd: mysql -V
+      - name: start mysql
+        ansible.builtin.shell:
+          cmd: systemctl start mysql
+      - name: ensure mysql is enabled to run on startup  
+        service: 
+          name: mysql 
+          state: started 
+          enabled: true
+      - name: Create database user with name 'mysql_user' and password 'password' with all database privileges
+        mysql_user:
+          name: mysql_user
+          password: password
+          priv: '*.*:ALL,GRANT'
+          state: present
+      - name: create a new database  
+        mysql_db: 
+          name: testdb 
+          state: present 
+          login_user: mysql_user 
+          login_password: password
+   
 
-  tasks:
-   -name: download mysqlsoftware
-    ansible.builtin.yum:
-      name:
-        - mysql
-        - mysql-server
-        - mysql-libs
-        - mysql-server
-      state: present
-  -name : check mysql is installed or not 
-   ansible.builtin.shell:
-      cmd: mysql -V
-  -name : start mysql
-   ansible.builtin.shell:
-      cmd: systemctl start mysqld
-  -name : to stop mysqsl DB
-   ansible.builtin.shell:
-      cmd:  service mysql [stop]
-  
-    
-  
-
-#    yum install mysql mysql-server mysql-libs mysql-server
- #   systemctl start mysqld  --- start mysql
-  #  service mysql [start|stop]
