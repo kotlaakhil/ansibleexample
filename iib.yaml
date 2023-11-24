@@ -1,24 +1,29 @@
--- name : installing mq and iib
-   host:
-   become : yes
-   task : 
-    - name: Add the user 'johnd' with a specific uid and a primary group of 'admin'
+---
+- name: install mq
+  hosts: all
+  become: yes
+  vars:
+    path: /home/mqm/bin
+    path1: /home/MQServer
+  
+  tasks : 
+    - name: create users 
       ansible.builtin.user:
         name: mqm
-        password : sarasu10
+        
 
-    - name : download the package
-      ansible.builtin.get_url:
-        url: https://drive.google.com/file/d/1aq_VnPD3gWwbxyL7341wFK5O4bCmIN0U/view?usp=sharing
-        dest: /opt
+  #  - name: download the package
+  #    ansible.builtin.get_url:
+  #     url: https://drive.google.com/file/d/1-ovWCIuD06bDgGxoxssge4Q4aCgECovg/view?usp=drive_link
+  #      dest: /home
 
-    - name : extract the file 
+    - name: extract the file 
       ansible.builtin.unarchive:
-       src: /opt/IBM_MQ.tar.gz
-       dest: /opt/
+       src: /home/IBM_MQ.tar.gz
+       dest: /home/
        remote_src: yes    
 
-    - name : Updating sysctl.con  file
+    - name: Updating sysctl.con  file
       ansible.builtin.lineinfile:
         path: /etc/sysctl.conf
         regexp: '^kernel.shmmni = 4096'
@@ -30,7 +35,7 @@
         regexp : '^kernel.sem = 250 32000 100 128'
         line : kernel.sem = 500 256000 250 1024
 
-    - name : update file with limits
+    - name: update file with limits
       ansible.builtin.blockinfile:
         path: /etc/security/limits.conf
         block: |
@@ -39,8 +44,30 @@
            mqm  hard  nofile 10240
            mqm  soft  nofile 10240
 
-    - name : accept licence 
-      command:  sh /opt/MQServer/mqlicense.sh -accept
+    - name: accept licence 
+      ansible.builtin.shell: '{{ path1 }}/mqlicense.sh -accept'
 
-     - name : install rpm packages
-       command: rpm -ivh /  
+# Get a list of rpms from a directory
+    - name: find rpm files and register the result 
+      find:
+        paths: /home/MQServer
+        patterns: "*.rpm"
+      register: rpm_files
+
+# Create a list of the rpms to use with the yum install command
+    - set_fact:
+       rpm_list: "{{ rpm_files.files | map(attribute='path') | list}}"
+
+# Use yum to install with a list
+    - name: install rpm files using rpm_list
+      community.general.apt_rpm:
+          pkg: "{{ rpm_list }}"
+          state: present
+      become: yes    
+      become_method: sudo
+
+    - name : to set instance 
+      command : '.{{ path }}/setmqinst -i -p /home/mqm'
+
+    - name : check package is installed or not
+      command : '.{{ path }}/mqconfig'
