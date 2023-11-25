@@ -3,8 +3,8 @@
   hosts: all
   become: yes
   vars:
-    path: /home/mqm/bin
-    path1: /home/MQServer
+    install: /opt/mqm/bin
+    path1: /home/ec2-user/MQServer
   
   tasks : 
     - name: create users 
@@ -15,12 +15,12 @@
   #  - name: download the package
   #    ansible.builtin.get_url:
   #     url: https://drive.google.com/file/d/1-ovWCIuD06bDgGxoxssge4Q4aCgECovg/view?usp=drive_link
-  #      dest: /home
+  #      dest: /home/ec2-user
 
     - name: extract the file 
       ansible.builtin.unarchive:
-       src: /home/IBM_MQ.tar.gz
-       dest: /home/
+       src: /home/ec2-user/IBM_MQ.tar.gz
+       dest: /home/ec2-user/
        remote_src: yes    
 
     - name: Updating sysctl.con  file
@@ -50,24 +50,30 @@
 # Get a list of rpms from a directory
     - name: find rpm files and register the result 
       find:
-        paths: /home/MQServer
+        paths: /home/ec2-user/MQServer
         patterns: "*.rpm"
       register: rpm_files
-
+      
 # Create a list of the rpms to use with the yum install command
     - set_fact:
        rpm_list: "{{ rpm_files.files | map(attribute='path') | list}}"
 
 # Use yum to install with a list
     - name: install rpm files using rpm_list
-      community.general.apt_rpm:
-          pkg: "{{ rpm_list }}"
-          state: present
-      become: yes    
-      become_method: sudo
+      command: 'rpm -ivh  /home/ec2-user/MQServer/MQSeries*'
+      become: yes  
+      ignore_errors: True
+
+    - name : to change path 
+      command: cd  {{install}}
 
     - name : to set instance 
-      command : '.{{ path }}/setmqinst -i -p /home/mqm'
-
+      shell : sh setmqinst -i -p /opt/mqm
+      
     - name : check package is installed or not
-      command : '.{{ path }}/mqconfig'
+      shell : ./opt/mqm/bin/mqconfig
+      
+
+
+
+  
