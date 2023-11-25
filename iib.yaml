@@ -4,23 +4,23 @@
   become: yes
   vars:
     install: /opt/mqm/bin
-    path1: /home/ec2-user/MQServer
+    path1: /opt/MQServer/
   
   tasks : 
     - name: create users 
       ansible.builtin.user:
         name: mqm
-        
 
-  #  - name: download the package
-  #    ansible.builtin.get_url:
-  #     url: https://drive.google.com/file/d/1-ovWCIuD06bDgGxoxssge4Q4aCgECovg/view?usp=drive_link
-  #      dest: /home/ec2-user
+    - name: Copy file with owner and permissions
+      ansible.builtin.copy:
+       src: /home/ec2-user/IBM_MQ.tar.gz
+       dest: /opt
+      become: yes 
 
     - name: extract the file 
       ansible.builtin.unarchive:
-       src: /home/ec2-user/IBM_MQ.tar.gz
-       dest: /home/ec2-user/
+       src: /opt/IBM_MQ.tar.gz
+       dest: /opt/
        remote_src: yes    
 
     - name: Updating sysctl.con  file
@@ -50,30 +50,35 @@
 # Get a list of rpms from a directory
     - name: find rpm files and register the result 
       find:
-        paths: /home/ec2-user/MQServer
-        patterns: "*.rpm"
+        paths: /opt/MQServer
+        patterns: "MQSeries*"
       register: rpm_files
       
 # Create a list of the rpms to use with the yum install command
     - set_fact:
        rpm_list: "{{ rpm_files.files | map(attribute='path') | list}}"
 
-# Use yum to install with a list
-    - name: install rpm files using rpm_list
-      command: 'rpm -ivh  /home/ec2-user/MQServer/MQSeries*'
-      become: yes  
-      ignore_errors: True
+    - name: Install RPM files
+      ansible.builtin.command: rpm -ivh "{{ item }}"
+      with_items: "{{ rpm_list }}"
+      become: yes
+      ignore_errors: true
 
     - name : to change path 
-      command: cd  {{install}}
-
-    - name : to set instance 
-      shell : sh setmqinst -i -p /opt/mqm
+      shell: cd  {{install}}
+    
+    - name: Set MQ instance
+      ansible.builtin.command: "{{install}}/setmqinst -i -p /opt/mqm"
+      ignore_errors: true
       
+
     - name : check package is installed or not
-      shell : ./opt/mqm/bin/mqconfig
-      
+      shell : "{{install}}/mqconfig"
+      become_user: mqm
+      ignore_errors: true
 
+    - name: check version
+      shell : dspmqver
 
 
   
