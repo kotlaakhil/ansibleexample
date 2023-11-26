@@ -1,0 +1,43 @@
+---
+- name: install iib
+  hosts: all
+  become: yes
+  vars:
+   mq_user: mqm
+   ACE: /opt/ace-11.0.0.11
+   bash_path: /home/mqm/.bash_profile
+  tasks:
+    - name: Copy file with owner and permissions
+      ansible.builtin.copy:
+       src: /home/ec2-user/11.0.0-ACE-LINUXX64-FP0011.tar.gz
+       dest: /opt
+       remote_src: yes
+      become: yes 
+
+    - name: extract the file 
+      ansible.builtin.unarchive:
+       src: /opt/11.0.0-ACE-LINUXX64-FP0011.tar.gz
+       dest: /opt/
+       remote_src: yes 
+      become: yes 
+      
+    - name: accept licence
+      command:  "{{ACE}}/ace make registry global accept license -y"
+      become: yes 
+      
+    - name: adding existing user '{{ mqm }}' to group mqbrkrs
+      user:
+       name: '{{ mq_user }}'
+       groups: mqbrkrs
+       append: yes
+      become: yes
+
+    - name : edit .profile 
+      ansible.builtin.blockinfile:
+        path: "{{bash_path}}"
+        block: |
+              ". {{ACE}}/server/bin/mqsiprofile"
+    - name: run bash profile 
+      command: "{{bash_path}}"
+      become: mqm       
+
