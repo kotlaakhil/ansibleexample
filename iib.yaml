@@ -3,13 +3,15 @@
   hosts: all
   become: yes
   vars:
-    install: /opt/mqm/bin
-    path1: /opt/MQServer/
-  
+     mq_install_dir: /opt/mqm
+     mq_package_path: /opt/MQServer
+     mq_license_path: /opt/MQServer/mqlicense.sh
+     mq_config_command: /opt/mqm/bin
+     mq_user: mqm
   tasks : 
     - name: create users 
       ansible.builtin.user:
-        name: mqm
+        name: "{{mq_user}}"
 
     - name: Copy file with owner and permissions
       ansible.builtin.copy:
@@ -45,12 +47,12 @@
            mqm  soft  nofile 10240
 
     - name: accept licence 
-      ansible.builtin.shell: '{{ path1 }}/mqlicense.sh -accept'
+      ansible.builtin.shell: '{{ mq_license_path }} -accept'
 
 # Get a list of rpms from a directory
     - name: find rpm files and register the result 
       find:
-        paths: /opt/MQServer
+        paths: "{{mq_package_path}}"
         patterns: "MQSeries*"
       register: rpm_files
       
@@ -65,16 +67,16 @@
       ignore_errors: true
 
     - name : to change path 
-      shell: cd  {{install}}
+      shell: cd  {{mq_install_dir}}
     
     - name: Set MQ instance
-      ansible.builtin.command: "{{install}}/setmqinst -i -p /opt/mqm"
+      ansible.builtin.command: "{{mq_config_command}}/setmqinst -i -p /opt/mqm"
       ignore_errors: true
       
 
     - name : check package is installed or not
-      shell : "{{install}}/mqconfig"
-      become_user: mqm
+      shell : "{{mq_config_command}}/mqconfig"
+      become_user: "{{mq_user}}"
       ignore_errors: true
 
     - name: check version
