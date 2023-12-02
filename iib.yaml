@@ -8,6 +8,7 @@
      mq_license_path: /opt/MQServer/mqlicense.sh
      mq_config_command: /opt/mqm/bin
      mq_user: mqm
+     orginal_path: /home/bandaru
   tasks : 
     - name: create users 
       ansible.builtin.user:
@@ -15,7 +16,7 @@
 
     - name: Copy file with owner and permissions
       ansible.builtin.copy:
-       src: /home/ec2-user/IBM_MQ.tar.gz
+       src: "{{/home/bandaru}}/IBM_MQ.tar.gz"
        dest: /opt
       become: yes 
 
