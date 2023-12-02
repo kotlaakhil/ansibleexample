@@ -1,0 +1,19 @@
+---
+- name : create bar file from git repository
+  hosts: 
+  vars:
+   git_repo_url: ""
+   project_directory: "/opt"
+   output_bar_file_path: "/opt"
+   project_name: "/opt"
+  
+  tasks:
+    - name : clone git repo
+      ansible.builtin.git:
+        repo: "{{git_repo_url}}"
+        dest: "{{project_directory}}"
+      register: git_clone_result
+
+    - name : create bar file 
+      ansible.builtin.command : "mqsicreatebar -data {{project_directory}} -b {{output_bar_file_path}} -p {{project_name}}"  
+      when: git_clone_result.changed
