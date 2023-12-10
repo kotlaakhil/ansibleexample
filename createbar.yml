@@ -1,19 +1,49 @@
 ---
-- name : create bar file from git repository
-  hosts: 
+- name: create bar file from git repository
+  hosts: localhost
+ # become: yes
   vars:
-   git_repo_url: ""
-   project_directory: "/opt"
-   output_bar_file_path: "/opt"
-   project_name: "/opt"
-  
+    git_repo_url: "https://github.com/kotlaakhil/iibsample.git"
+    project_directory: "/home/mqm/ansible"
+    output_bar_file_path: "/home/mqm"
+    project_name: "decimal"
+    xvfb_display: ":99"
+
   tasks:
-    - name : clone git repo
+    - name: create a directory
+      file:
+        path: "{{ project_directory }}/{{ project_name }}"
+        state: directory
+        mode: 0755
+
+    - name: clone git repo
       ansible.builtin.git:
-        repo: "{{git_repo_url}}"
-        dest: "{{project_directory}}"
+        repo: "{{ git_repo_url }}"
+        dest: "{{ project_directory }}/{{ project_name }}"
       register: git_clone_result
 
-    - name : create bar file 
-      ansible.builtin.command : "mqsicreatebar -data {{project_directory}} -b {{output_bar_file_path}} -p {{project_name}}"  
-      when: git_clone_result.changed
+    - name: Change file ownership, group and permissions
+      ansible.builtin.file:
+        path: "{{ output_bar_file_path }}/.bash_profile"
+        owner: mqm
+        group: mqm
+        mode: '0755'
+
+    - name: Run .bash_profile
+      ansible.builtin.shell:
+        cmd: "source {{output_bar_file_path}}/.bash_profile"
+      args:
+        executable: /bin/bash
+      become: yes
+      become_user: mqm
+
+   # - name: Install Xvfb (you might need to adapt this to your package manager)
+   #   ansible.builtin.package:
+   #     name: xvfb
+   #     state: present
+   #   become: yes
+
+    - name: Run mqsicreatebar with Xvfb
+      ansible.builtin.command: "/usr/bin/xvfb-run -a /opt/mqsi/ace-12.0.2.0/tools/mqsicreatebar -data /var/mqsi -b {{ output_bar_file_path }}/{{ project_name }}.bar -p {{ project_name }} "
+      environment:
+        DISPLAY: "{{ xvfb_display }}"
