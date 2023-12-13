@@ -1,0 +1,37 @@
+---
+- name: Build Application and Generate Bar File
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    REPONAME: "testapplication"
+    VERSION: "1.0"
+    BUILD_NUMBER: "01"
+    PROJECTTYPE: "IIB"
+    project_directory: "/home/mqm/ansible"
+    Bar_file_location: "/home/mqm"
+    your_username: "kotlaakhil"
+    GIT_REPO_URL: "https://github.com/{{ your_username }}/{{ REPONAME }}.git"
+
+  tasks:
+    - name: Clone Git repository
+      git:
+        repo: "{{ GIT_REPO_URL }}"
+        dest: "{{project_directory}}/{{ REPONAME }}"
+      register: git_clone
+
+    - name: Check project type and generate bar file
+      shell: "zip -r {{Bar_file_location}}/{{ REPONAME }}_{{ VERSION }}_CI_{{ BUILD_NUMBER }}.zip {{project_directory}}/{{REPONAME}}/* "
+      when: PROJECTTYPE == "IIB"
+      args:
+        chdir: "{{ REPONAME }}"
+
+    - name: Print an error message for unsupported project types
+      debug:
+        msg: "Unsupported project type: {{ PROJECTTYPE }}"
+      when: PROJECTTYPE != "IIB"
+    
+
+    - name: change zip to bar file 
+      shell: "mv {{Bar_file_location}}/{{ REPONAME }}_{{ VERSION }}_CI_{{ BUILD_NUMBER }}.zip {{Bar_file_location}}/{{ REPONAME }}_{{ VERSION }}_CI_{{ BUILD_NUMBER }}.bar"
+
